@@ -5,10 +5,6 @@ const sectionSequence = ['statistics', 'recommend', 'all'];
 const sectionClassList = ['section-statistics', 'section-recommend', 'section-all'];
 const modalElements = {};
 const numberFormatter = new Intl.NumberFormat('ja-JP');
-const percentFormatter = new Intl.NumberFormat('ja-JP', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2
-});
 
 document.addEventListener('DOMContentLoaded', () => {
   navLinks = Array.from(document.querySelectorAll('.main-nav a'));
@@ -54,13 +50,7 @@ function renderStatistics(records) {
     },
     { buy: 0, hold: 0, sell: 0 }
   );
-  const avg =
-    total > 0
-      ? records.reduce((sum, record) => sum + (toFiniteNumber(record.profitRatio) ?? 0), 0) / total
-      : 0;
-
   setText('stat-total', formatNumber(total));
-  setText('stat-average', total > 0 ? formatRatio(avg) : '-');
   setText('stat-buy', formatNumber(counts.buy));
   setText('stat-hold', formatNumber(counts.hold));
   setText('stat-sell', formatNumber(counts.sell));
@@ -68,12 +58,9 @@ function renderStatistics(records) {
 
 // おすすめ銘柄処理
 function renderRecommendations(records) {
-  const buyCandidates = records
-    .filter(record => (record.recommendation || '').toUpperCase() === 'BUY')
-    .sort(
-      (a, b) =>
-        (toFiniteNumber(b.profitRatio) ?? -Infinity) - (toFiniteNumber(a.profitRatio) ?? -Infinity)
-    );
+  const buyCandidates = records.filter(
+    record => (record.recommendation || '').toUpperCase() === 'BUY'
+  );
 
   const featured = buyCandidates.slice(0, 3);
   const others = buyCandidates.slice(3, 15);
@@ -107,10 +94,6 @@ function createRecommendationCard(record, isFeatured) {
   code.className = 'recommend-code';
   code.textContent = `証券コード: ${record.code || '-'}`;
 
-  const profit = document.createElement('p');
-  profit.className = 'recommend-profit';
-  profit.textContent = `利益率 ${formatRatio(record.profitRatio)}`;
-
   const reason = document.createElement('p');
   reason.className = 'recommend-reason';
   reason.textContent = truncateText(
@@ -120,7 +103,6 @@ function createRecommendationCard(record, isFeatured) {
 
   card.appendChild(name);
   card.appendChild(code);
-  card.appendChild(profit);
   card.appendChild(reason);
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
@@ -156,12 +138,6 @@ function renderAllTable(records) {
     const currentCell = document.createElement('td');
     currentCell.textContent = formatPrice(record.currentPrice);
 
-    const predictCell = document.createElement('td');
-    predictCell.textContent = formatPrice(record.predictPrice);
-
-    const profitCell = document.createElement('td');
-    profitCell.textContent = formatRatio(record.profitRatio);
-
     const recommendationCell = document.createElement('td');
     recommendationCell.textContent = record.recommendation || '-';
     const recommendationClass = getRecommendationClass(record.recommendation);
@@ -172,8 +148,6 @@ function renderAllTable(records) {
     row.appendChild(nameCell);
     row.appendChild(codeCell);
     row.appendChild(currentCell);
-    row.appendChild(predictCell);
-    row.appendChild(profitCell);
     row.appendChild(recommendationCell);
 
     attachModalTrigger(row, record);
@@ -188,8 +162,6 @@ function openModal(record) {
   modalElements.name.textContent = record.name || '-';
   modalElements.code.textContent = `証券コード: ${record.code || '-'}`;
   modalElements.current.textContent = formatPrice(record.currentPrice);
-  modalElements.predict.textContent = formatPrice(record.predictPrice);
-  modalElements.profit.textContent = formatRatio(record.profitRatio);
   modalElements.recommendation.textContent = record.recommendation || '-';
   modalElements.reason.textContent =
     record.reasonsForRecommendation || '推奨理由の情報がありません。';
@@ -215,8 +187,6 @@ function setupModal() {
   modalElements.name = document.getElementById('modal-name');
   modalElements.code = document.getElementById('modal-code');
   modalElements.current = document.getElementById('modal-current');
-  modalElements.predict = document.getElementById('modal-predict');
-  modalElements.profit = document.getElementById('modal-profit');
   modalElements.recommendation = document.getElementById('modal-recommendation');
   modalElements.reason = document.getElementById('modal-reason');
 
@@ -342,12 +312,6 @@ function formatNumber(value) {
 function formatPrice(value) {
   const numericValue = toFiniteNumber(value);
   return numericValue === null ? '-' : `¥${numberFormatter.format(numericValue)}`;
-}
-
-// 利益率フォーマット
-function formatRatio(value) {
-  const numericValue = toFiniteNumber(value);
-  return numericValue === null ? '-' : `${percentFormatter.format(numericValue)}%`;
 }
 
 // 推奨度クラス決定
