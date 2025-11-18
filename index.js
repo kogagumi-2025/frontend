@@ -42,10 +42,10 @@ function renderStatistics(records) {
   const total = records.length;
   const counts = records.reduce(
     (acc, record) => {
-      const rec = (record.recommendation || '').toUpperCase();
-      if (rec === 'BUY') acc.buy += 1;
-      if (rec === 'HOLD') acc.hold += 1;
-      if (rec === 'SELL') acc.sell += 1;
+      const category = getRecommendationDisplay(record.recommendation).category;
+      if (category === 'buy') acc.buy += 1;
+      if (category === 'hold') acc.hold += 1;
+      if (category === 'sell') acc.sell += 1;
       return acc;
     },
     { buy: 0, hold: 0, sell: 0 }
@@ -58,34 +58,48 @@ function renderStatistics(records) {
 
 // おすすめ銘柄処理
 function renderRecommendations(records) {
-  const buyCandidates = records.filter(
-    record => (record.recommendation || '').toUpperCase() === 'BUY'
-  );
+  const candidates = records
+    .map((record, index) => ({
+      record,
+      info: getRecommendationDisplay(record.recommendation),
+      index
+    }))
+    .filter(item => (item.info.score ?? -Infinity) >= 0.2)
+    .sort((a, b) => {
+      const diff = (b.info.score ?? -Infinity) - (a.info.score ?? -Infinity);
+      if (diff !== 0) return diff;
+      return a.index - b.index;
+    });
 
-  const featured = buyCandidates.slice(0, 3);
-  const others = buyCandidates.slice(3, 15);
+  const featured = candidates.slice(0, 3);
+  const others = candidates.slice(3, 15);
 
   const topContainer = document.getElementById('top-picks');
   const otherContainer = document.getElementById('other-picks');
 
   if (topContainer) {
     topContainer.innerHTML = '';
-    featured.forEach(record => topContainer.appendChild(createRecommendationCard(record, true)));
+    featured.forEach(item =>
+      topContainer.appendChild(createRecommendationCard(item.record, item.info, true))
+    );
   }
 
   if (otherContainer) {
     otherContainer.innerHTML = '';
-    others.forEach(record => otherContainer.appendChild(createRecommendationCard(record, false)));
+    others.forEach(item =>
+      otherContainer.appendChild(createRecommendationCard(item.record, item.info, false))
+    );
   }
 }
 
 // 推薦カード生成
-function createRecommendationCard(record, isFeatured) {
+function createRecommendationCard(record, displayInfo, isFeatured) {
   const card = document.createElement('article');
   card.className = 'recommend-card';
   if (isFeatured) {
     card.classList.add('recommend-card--featured');
   }
+  const info = displayInfo || getRecommendationDisplay(record.recommendation);
 
   const name = document.createElement('h4');
   name.textContent = record.name || '-';
@@ -93,6 +107,14 @@ function createRecommendationCard(record, isFeatured) {
   const code = document.createElement('p');
   code.className = 'recommend-code';
   code.textContent = `証券コード: ${record.code || '-'}`;
+
+  const score = document.createElement('p');
+  score.className = 'recommend-score';
+  const scoreText =
+    info.label === '-'
+      ? '推奨スコア: -'
+      : `${info.label} (${formatScore(info.score)})`;
+  score.textContent = scoreText;
 
   const reason = document.createElement('p');
   reason.className = 'recommend-reason';
@@ -103,6 +125,7 @@ function createRecommendationCard(record, isFeatured) {
 
   card.appendChild(name);
   card.appendChild(code);
+  card.appendChild(score);
   card.appendChild(reason);
   card.tabIndex = 0;
   card.setAttribute('role', 'button');
@@ -139,10 +162,13 @@ function renderAllTable(records) {
     currentCell.textContent = formatPrice(record.currentPrice);
 
     const recommendationCell = document.createElement('td');
-    recommendationCell.textContent = record.recommendation || '-';
-    const recommendationClass = getRecommendationClass(record.recommendation);
-    if (recommendationClass) {
-      recommendationCell.classList.add(recommendationClass);
+    const recommendationInfo = getRecommendationDisplay(record.recommendation);
+    recommendationCell.textContent =
+      recommendationInfo.label === '-'
+        ? '-'
+        : `${recommendationInfo.label} (${formatScore(recommendationInfo.score)})`;
+    if (recommendationInfo.className) {
+      recommendationCell.classList.add(recommendationInfo.className);
     }
 
     row.appendChild(nameCell);
@@ -162,7 +188,11 @@ function openModal(record) {
   modalElements.name.textContent = record.name || '-';
   modalElements.code.textContent = `証券コード: ${record.code || '-'}`;
   modalElements.current.textContent = formatPrice(record.currentPrice);
-  modalElements.recommendation.textContent = record.recommendation || '-';
+  const recommendationInfo = getRecommendationDisplay(record.recommendation);
+  modalElements.recommendation.textContent =
+    recommendationInfo.label === '-'
+      ? '-'
+      : `${recommendationInfo.label} (${formatScore(recommendationInfo.score)})`;
   modalElements.reason.textContent =
     record.reasonsForRecommendation || '推奨理由の情報がありません。';
 
@@ -314,13 +344,36 @@ function formatPrice(value) {
   return numericValue === null ? '-' : `¥${numberFormatter.format(numericValue)}`;
 }
 
-// 推奨度クラス決定
-function getRecommendationClass(recommendation) {
-  const normalized = (recommendation || '').toUpperCase();
-  if (normalized === 'BUY') return 'recommendation-buy';
-  if (normalized === 'HOLD') return 'recommendation-hold';
-  if (normalized === 'SELL') return 'recommendation-sell';
-  return '';
+function parseRecommendationScore(value) {
+  const numeric = toFiniteNumber(value);
+  if (numeric === null) return null;
+  if (numeric > 1) return 1;
+  if (numeric < -1) return -1;
+  return numeric;
+}
+
+function getRecommendationDisplay(value) {
+  const score = parseRecommendationScore(value);
+  if (score === null) {
+    return { label: '-', className: '', category: 'unknown', score: null };
+  }
+  if (score > 0.6) {
+    return { label: '強い買い推奨', className: 'recommendation-buy', category: 'buy', score };
+  }
+  if (score >= 0.2) {
+    return { label: '買い推奨', className: 'recommendation-buy', category: 'buy', score };
+  }
+  if (score > -0.2) {
+    return { label: '中立', className: 'recommendation-hold', category: 'hold', score };
+  }
+  if (score >= -0.6) {
+    return { label: '売り推奨', className: 'recommendation-sell', category: 'sell', score };
+  }
+  return { label: '強い売り推奨', className: 'recommendation-sell', category: 'sell', score };
+}
+
+function formatScore(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(2) : '-';
 }
 
 // テキスト省略
