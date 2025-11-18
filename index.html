@@ -1,0 +1,109 @@
+<!-- file: index.html -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>東証プライム全銘柄分析システム</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="section-statistics">
+  <header class="site-header">
+    <h1>東証プライム全銘柄分析システム</h1>
+  </header>
+  <nav class="main-nav">
+    <a href="#statistics" data-section="statistics" class="active">統計情報</a>
+    <a href="#recommend" data-section="recommend">おすすめ銘柄</a>
+    <a href="#all" data-section="all">全銘柄一覧</a>
+  </nav>
+  <main>
+    <section id="statistics" class="section">
+      <h2>分析統計情報</h2>
+      <div class="stat-cards">
+        <article class="stat-card">
+          <p class="stat-label">分析銘柄数</p>
+          <p id="stat-total" class="stat-value">-</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-label">平均上昇率</p>
+          <p id="stat-average" class="stat-value">-</p>
+        </article>
+        <article class="stat-card stat-card--buy">
+          <p class="stat-label">BUY 推奨数</p>
+          <p id="stat-buy" class="stat-value">-</p>
+        </article>
+        <article class="stat-card stat-card--hold">
+          <p class="stat-label">HOLD 推奨数</p>
+          <p id="stat-hold" class="stat-value">-</p>
+        </article>
+        <article class="stat-card stat-card--sell">
+          <p class="stat-label">SELL 推奨数</p>
+          <p id="stat-sell" class="stat-value">-</p>
+        </article>
+      </div>
+    </section>
+    <section id="recommend" class="section">
+      <h2>おすすめ銘柄</h2>
+      <div class="recommend-group">
+        <h3>特におすすめの 3 銘柄</h3>
+        <div id="top-picks" class="recommend-cards top-picks"></div>
+      </div>
+      <div class="recommend-group">
+        <h3>その他おすすめ銘柄</h3>
+        <div id="other-picks" class="recommend-cards other-picks"></div>
+      </div>
+    </section>
+    <section id="all" class="section">
+      <h2>全銘柄一覧</h2>
+      <div class="table-wrapper">
+        <table id="all-table">
+          <thead>
+            <tr>
+              <th scope="col">企業名</th>
+              <th scope="col">証券コード</th>
+              <th scope="col">現在価格</th>
+              <th scope="col">予想価格</th>
+              <th scope="col">利益率</th>
+              <th scope="col">推奨度</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+    <section id="notice" class="section notice">
+      <p>⚠️ 重要な注意事項: この分析結果は過去のデータと統計的手法に基づく参考情報です。実際の投資判断は必ずご自身の責任で行い、複数の情報源を参考にしてください。株式投資にはリスクが伴い、元本割れの可能性があります。</p>
+    </section>
+  </main>
+  <div id="loading-indicator" class="loading" aria-live="polite">データを読み込み中です...</div>
+  <div id="error-banner" class="error-banner" role="alert">データを読み込めませんでした。</div>
+  <div id="modal" class="modal-overlay" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modal-name">
+      <button type="button" class="modal-close" aria-label="閉じる">&times;</button>
+      <h3 id="modal-name">-</h3>
+      <p id="modal-code" class="modal-code">-</p>
+      <dl class="modal-details">
+        <div class="modal-detail-row">
+          <dt>現在価格</dt>
+          <dd id="modal-current">-</dd>
+        </div>
+        <div class="modal-detail-row">
+          <dt>予想価格</dt>
+          <dd id="modal-predict">-</dd>
+        </div>
+        <div class="modal-detail-row">
+          <dt>利益率</dt>
+          <dd id="modal-profit">-</dd>
+        </div>
+        <div class="modal-detail-row">
+          <dt>推奨度</dt>
+          <dd id="modal-recommendation">-</dd>
+        </div>
+      </dl>
+      <p class="modal-reason"><strong>推奨理由:</strong> <span id="modal-reason">-</span></p>
+    </div>
+  </div>
+  <script src="index.js" defer></script>
+</body>
+</html>
+
