@@ -378,6 +378,6 @@ function formatScore(value) {
 
 // テキスト省略
 function truncateText(text, limit) {
-  if (!text) return '';
+  if (!text || typeof text !== 'string') return '';
   return text.length <= limit ? text : `${text.slice(0, limit)}...`;
 }
